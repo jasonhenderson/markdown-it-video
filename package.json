@@ -20,7 +20,10 @@
     "markdown-it",
     "markdown-it-plugin"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "g": "^2.0.1",
+    "markdown-to-json": "^0.5.1"
+  },
   "devDependencies": {
     "eslint": "^4.9.0",
     "eslint-config-airbnb": "^16.1.0",

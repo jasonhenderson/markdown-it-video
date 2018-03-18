@@ -37,10 +37,9 @@ function mfrParser(url) {
   return match ? match[1] : url;
 }
 
-
 const EMBED_REGEX = /@\[([a-zA-Z].+)]\([\s]*(.*?)[\s]*[)]/im;
 
-function videoEmbed(md, options) {
+function videoEmbed(md, tokenizer, options) {
   function videoReturn(state, silent) {
     var serviceEnd;
     var serviceStart;
@@ -97,7 +96,7 @@ function videoEmbed(md, options) {
       const newState = new theState.md.inline.State(service, theState.md, theState.env, []);
       newState.md.inline.tokenize(newState);
 
-      token = theState.push('video', '');
+      token = theState.push(tokenizer, '');
       token.videoID = videoID;
       token.service = service;
       token.level = theState.level;
@@ -156,6 +155,29 @@ function tokenizeVideo(md, options) {
   return tokenizeReturn;
 }
 
+function tokenizeVideoLink(md, options) {
+  function tokenizeLinkReturn(tokens, idx) {
+    const videoID = md.utils.escapeHtml(tokens[idx].videoID);
+    const service = md.utils.escapeHtml(tokens[idx].service).toLowerCase();
+
+    if (service === 'youtube' && videoID) {
+      const linkUrl = 'https://img.youtube.com/vi/' + videoID + '/0.jpg';
+      const videoLinkUrl = options.url(service, videoID, options);
+
+      const html = ('<div class=\'video-link\'><a href=\'' + videoLinkUrl + '\'><img' +
+      ' width=\'' + (options[service].width) + '\'' +
+      ' height=\'' + (options[service].height) + '\'' +
+      ' src=\'' + linkUrl + '\' /></a></div>');
+
+      return html;
+    }
+
+    return '<p>Video Link Working</p>';
+  }
+
+  return tokenizeLinkReturn;
+}
+
 const defaults = {
   url: videoUrl,
   youtube: { width: 640, height: 390 },
@@ -165,7 +187,23 @@ const defaults = {
   osf: { width: '100%', height: '100%' },
 };
 
-module.exports = function videoPlugin(md, options) {
+module.exports.VideoLinkPlugin = function videoLinkPlugin(md, options) {
+  var theOptions = options;
+  var theMd = md;
+  if (theOptions) {
+    Object.keys(defaults).forEach(function checkForKeys(key) {
+      if (typeof theOptions[key] === 'undefined') {
+        theOptions[key] = defaults[key];
+      }
+    });
+  } else {
+    theOptions = defaults;
+  }
+  theMd.renderer.rules.videoLink = tokenizeVideoLink(theMd, theOptions);
+  theMd.inline.ruler.before('emphasis', 'videoLink', videoEmbed(theMd, 'videoLink', theOptions));
+};
+
+module.exports.VideoPlugin = function videoPlugin(md, options) {
   var theOptions = options;
   var theMd = md;
   if (theOptions) {
@@ -178,5 +216,5 @@ module.exports = function videoPlugin(md, options) {
     theOptions = defaults;
   }
   theMd.renderer.rules.video = tokenizeVideo(theMd, theOptions);
-  theMd.inline.ruler.before('emphasis', 'video', videoEmbed(theMd, theOptions));
+  theMd.inline.ruler.before('emphasis', 'video', videoEmbed(theMd, 'video', theOptions));
 };
